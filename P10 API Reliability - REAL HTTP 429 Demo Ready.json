@@ -1,0 +1,469 @@
+{
+  "name": "P10 API Reliability - REAL HTTP 429 Demo Ready",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "commproto-p10",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "0266ce6a-6adc-4120-a246-6a180ed29e42",
+      "name": "Webhook - P10 API Reliability",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -736,
+        16
+      ],
+      "webhookId": "commproto-p10"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "clientId",
+              "name": "clientId",
+              "value": "={{ $json.body?.clientId || $json.clientId || 'demo-client' }}",
+              "type": "string"
+            },
+            {
+              "id": "scenario",
+              "name": "scenario",
+              "value": "={{ $json.body?.scenario || $json.scenario || 'rate-limit' }}",
+              "type": "string"
+            },
+            {
+              "id": "timestamp",
+              "name": "timestamp",
+              "value": "={{ $json.body?.timestamp || $json.timestamp || $now }}",
+              "type": "string"
+            },
+            {
+              "id": "topic",
+              "name": "topic",
+              "value": "P10 - API Reliability",
+              "type": "string"
+            },
+            {
+              "id": "rpsMapping",
+              "name": "rpsMapping",
+              "value": "Rate Limiting, Load Balancing, HTTP Status Code, Evidence",
+              "type": "string"
+            },
+            {
+              "id": "demoNote",
+              "name": "demoNote",
+              "value": "Postman triggers n8n; n8n calls backend reliability API; IF node routes success/error based on backendStatusCode.",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "7781289b-c849-40c0-92b1-52ac02520673",
+      "name": "Normalize Request",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -496,
+        16
+      ]
+    },
+    {
+      "parameters": {
+        "url": "http://host.docker.internal:8088/api/reliability/rate-limited",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true,
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "id": "c4c3adfe-d6cf-4433-b8dd-a2927bf10c88",
+      "name": "Call Reliability API",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -256,
+        16
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "number": [
+            {
+              "value1": "={{ $json.statusCode }}",
+              "operation": "smaller",
+              "value2": 400
+            }
+          ],
+          "combinator": "and",
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          }
+        },
+        "options": {}
+      },
+      "id": "2c3fab95-8ca5-4a94-baef-406d54e2b254",
+      "name": "Check Status Code < 400",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        -16,
+        16
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "workflowResult",
+              "name": "workflowResult",
+              "value": "SUCCESS",
+              "type": "string"
+            },
+            {
+              "id": "workflowBranch",
+              "name": "workflowBranch",
+              "value": "TRUE_BRANCH_SUCCESS",
+              "type": "string"
+            },
+            {
+              "id": "executedNode",
+              "name": "executedNode",
+              "value": "Build Success Response",
+              "type": "string"
+            },
+            {
+              "id": "ifDecision",
+              "name": "ifDecision",
+              "value": "backendStatusCode < 400",
+              "type": "string"
+            },
+            {
+              "id": "clientId",
+              "name": "clientId",
+              "value": "={{ $('Normalize Request').item.json.clientId }}",
+              "type": "string"
+            },
+            {
+              "id": "scenario",
+              "name": "scenario",
+              "value": "={{ $('Normalize Request').item.json.scenario }}",
+              "type": "string"
+            },
+            {
+              "id": "timestamp",
+              "name": "timestamp",
+              "value": "={{ $('Normalize Request').item.json.timestamp }}",
+              "type": "string"
+            },
+            {
+              "id": "backendStatusCode",
+              "name": "backendStatusCode",
+              "value": "={{ $('Call Reliability API').item.json.statusCode || $json.statusCode }}",
+              "type": "number"
+            },
+            {
+              "id": "backendMessage",
+              "name": "backendMessage",
+              "value": "={{ $('Call Reliability API').item.json.body?.message || 'Request accepted' }}",
+              "type": "string"
+            },
+            {
+              "id": "remaining",
+              "name": "remaining",
+              "value": "={{ $('Call Reliability API').item.json.body?.remaining }}",
+              "type": "number"
+            },
+            {
+              "id": "limit",
+              "name": "limit",
+              "value": "={{ $('Call Reliability API').item.json.body?.limit }}",
+              "type": "number"
+            },
+            {
+              "id": "teachingPoint",
+              "name": "teachingPoint",
+              "value": "Status < 400 means the backend API accepted the request.",
+              "type": "string"
+            },
+            {
+              "id": "evidenceMessage",
+              "name": "evidenceMessage",
+              "value": "Workflow hit TRUE branch and executed Build Success Response because backendStatusCode is below 400.",
+              "type": "string"
+            },
+            {
+              "id": "responseCodeSent",
+              "name": "responseCodeSent",
+              "value": "={{ Number($json.statusCode || 200) }}",
+              "type": "number"
+            },
+            {
+              "id": "httpLayerTeachingPoint",
+              "name": "httpLayerTeachingPoint",
+              "value": "n8n Respond Success mirrors backendStatusCode to the HTTP response code. For success branch this should be 200.",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "021fbfbd-69bd-4e84-8527-5a03e94c1d95",
+      "name": "Build Success Response",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        224,
+        -112
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {
+          "responseCode": "={{ Number($json.backendStatusCode || 200) }}"
+        }
+      },
+      "id": "5ba48b5e-777f-4ad9-aa01-44d30e14d0af",
+      "name": "Respond Success",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        464,
+        -112
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "workflowResult",
+              "name": "workflowResult",
+              "value": "RETRY_NEEDED_OR_FAILED",
+              "type": "string"
+            },
+            {
+              "id": "workflowBranch",
+              "name": "workflowBranch",
+              "value": "FALSE_BRANCH_ERROR",
+              "type": "string"
+            },
+            {
+              "id": "executedNode",
+              "name": "executedNode",
+              "value": "Build Error Response",
+              "type": "string"
+            },
+            {
+              "id": "ifDecision",
+              "name": "ifDecision",
+              "value": "backendStatusCode >= 400",
+              "type": "string"
+            },
+            {
+              "id": "clientId",
+              "name": "clientId",
+              "value": "={{ $('Normalize Request').item.json.clientId }}",
+              "type": "string"
+            },
+            {
+              "id": "scenario",
+              "name": "scenario",
+              "value": "={{ $('Normalize Request').item.json.scenario }}",
+              "type": "string"
+            },
+            {
+              "id": "timestamp",
+              "name": "timestamp",
+              "value": "={{ $('Normalize Request').item.json.timestamp }}",
+              "type": "string"
+            },
+            {
+              "id": "backendStatusCode",
+              "name": "backendStatusCode",
+              "value": "={{ $('Call Reliability API').item.json.statusCode || $json.statusCode }}",
+              "type": "number"
+            },
+            {
+              "id": "backendMessage",
+              "name": "backendMessage",
+              "value": "={{ $('Call Reliability API').item.json.body?.message || 'Too Many Requests' }}",
+              "type": "string"
+            },
+            {
+              "id": "retryAfterSeconds",
+              "name": "retryAfterSeconds",
+              "value": "={{ $('Call Reliability API').item.json.body?.retryAfterSeconds || $('Call Reliability API').item.json.body?.retryAfter || 0 }}",
+              "type": "number"
+            },
+            {
+              "id": "limit",
+              "name": "limit",
+              "value": "={{ $('Call Reliability API').item.json.body?.limit }}",
+              "type": "number"
+            },
+            {
+              "id": "teachingPoint",
+              "name": "teachingPoint",
+              "value": "429 means Too Many Requests. The client should wait before retrying.",
+              "type": "string"
+            },
+            {
+              "id": "suggestion",
+              "name": "suggestion",
+              "value": "Run Postman Runner with 6–8 iterations and zero delay to demonstrate success branch changing to error branch.",
+              "type": "string"
+            },
+            {
+              "id": "evidenceMessage",
+              "name": "evidenceMessage",
+              "value": "Workflow hit FALSE branch and executed Build Error Response because backend API returned a status code greater than or equal to 400.",
+              "type": "string"
+            },
+            {
+              "id": "responseCodeSent",
+              "name": "responseCodeSent",
+              "value": "={{ Number($json.statusCode || 429) }}",
+              "type": "number"
+            },
+            {
+              "id": "httpLayerTeachingPoint",
+              "name": "httpLayerTeachingPoint",
+              "value": "n8n Respond Error mirrors backendStatusCode to the HTTP response code. For rate limit branch this should be 429 Too Many Requests.",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "3db1fb20-c92b-45fc-89e3-2c589f2a0243",
+      "name": "Build Error Response",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        224,
+        128
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {
+          "responseCode": "={{ Number($json.backendStatusCode || 429) }}"
+        }
+      },
+      "id": "d0b4158f-b154-4fd8-9dae-3c68fdd2e533",
+      "name": "Respond Error",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        464,
+        128
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook - P10 API Reliability": {
+      "main": [
+        [
+          {
+            "node": "Normalize Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Request": {
+      "main": [
+        [
+          {
+            "node": "Call Reliability API",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call Reliability API": {
+      "main": [
+        [
+          {
+            "node": "Check Status Code < 400",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Status Code < 400": {
+      "main": [
+        [
+          {
+            "node": "Build Success Response",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Build Error Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Success Response": {
+      "main": [
+        [
+          {
+            "node": "Respond Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Error Response": {
+      "main": [
+        [
+          {
+            "node": "Respond Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "38be6202-3684-47d0-ae1e-3f4f3c766c7a",
+  "meta": {
+    "instanceId": "2c77244758d696a24a69be11975654f71d11fa6753c98d352f34cce795d5eada"
+  },
+  "nodeGroups": [],
+  "id": "rfJdXqe30yYM9zyG",
+  "tags": []
+}
